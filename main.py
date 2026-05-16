@@ -730,56 +730,105 @@ def kb_filter():
 # ════════════════════════════════════════════
 #  STATS CARD
 # ════════════════════════════════════════════
-def stats_card(done,total,stats,ll="",cl="",result_folder=None):
-    pct=int(done/total*100) if total else 0
-    filled=pct//10; bar="█"*filled+"░"*(10-filled)
-    sl=f"⭐ ⭐ {ll}  |  🔍 🔄 {cl}\n" if ll else ""
+def stats_card(done, total, stats, ll="", cl="", result_folder=None):
+    percent = int((done / total) * 100) if total else 0
 
-    base=(f"⚡ Checking…\n━━━━━━━━━━━━━━━━━━━━\n"
-          f"⏳ [{bar}] {pct}%  {done:,}/{total:,}\n━━━━━━━━━━━━━━━━━━━━\n"
-          f"✅ Valid      : {stats.get('valid',0):,}\n"
-          f"❌ Invalid    : {stats.get('invalid',0):,}\n"
-          f"✨ Clean      : {stats.get('clean',0):,}\n"
-          f"⚠️  Not Clean  : {stats.get('not_clean',0):,}\n"
-          f"🎮 Has CODM   : {stats.get('has_codm',0):,}\n"
-          f"📭 No CODM    : {stats.get('no_codm',0):,}\n"
-          f"━━━━━━━━━━━━━━━━━━━━\n")
+    # Main progress bar
+    filled = int(percent / 10)
+    bar = "█" * filled + "░" * (10 - filled)
 
-    # Level range + country breakdown from result folder
-    extra=""
-    if result_folder:
-        try:
-            lvl,ctr,hits=parse_result_stats(result_folder)
-            live_codm=stats.get("has_codm",0)
-            # ── Always scale file counts to match LiveStats has_codm ──────
-            # parse_result_stats may be inflated (checker writes same account
-            # to multiple level-range files). LiveStats is the ground truth.
-            if live_codm>0 and hits>0 and hits!=live_codm:
-                scale=live_codm/hits
-                lvl={k:max(1,round(v*scale)) for k,v in lvl.items()}
-                ctr={k:max(1,round(v*scale)) for k,v in ctr.items()}
-                hits=live_codm
-            elif live_codm>0 and hits==0:
-                hits=live_codm
-            if hits>0:
-                lvl_lines="📊 Level Distribution\n"
-                for rng,cnt in lvl.items():
-                    pct2=cnt/hits*100
-                    bar2="█"*int(pct2//10)+"░"*(10-int(pct2//10))
-                    lvl_lines+=f"  {rng:<8}: [{bar2}] {cnt} ({pct2:.1f}%)\n"
-                ctr_lines="🌏 Server Distribution\n"
-                for country,cnt in list(ctr.items())[:6]:
-                    pct3=cnt/hits*100
-                    bar3="█"*int(pct3//10)+"░"*(10-int(pct3//10))
-                    ctr_lines+=f"  {country:<6}: [{bar3}] {cnt} ({pct3:.1f}%)\n"
-                extra=(f"━━━━━━━━━━━━━━━━━━━━\n"
-                       f"{lvl_lines}"
-                       f"━━━━━━━━━━━━━━━━━━━━\n"
-                       f"{ctr_lines}"
-                       f"━━━━━━━━━━━━━━━━━━━━\n")
-        except: pass
+    # Basic stats
+    valid = stats.get("valid", 0)
+    invalid = stats.get("invalid", 0)
+    clean = stats.get("clean", 0)
+    not_clean = stats.get("not_clean", 0)
+    codm = stats.get("codm", 0)
+    no_codm = stats.get("no_codm", 0)
 
-    return base+extra+sl+"⏹ /stop or /cancel"
+    # Extra stats
+    levels = stats.get("levels", {})
+    servers = stats.get("servers", {})
+
+    def mini_bar(value, total):
+        if total <= 0:
+            return "░░░░░░░░░░"
+
+        filled = int((value / total) * 10)
+
+        if value > 0 and filled == 0:
+            filled = 1
+
+        return "█" * filled + "░" * (10 - filled)
+
+    text = f"""<pre>
+⚡ CHECKING ACCOUNTS
+
+[{bar}] {percent}%
+
+📦 {done:,} / {total:,}
+
+━━━━━━━━━━━━━━━━━━
+✅ Valid      : {valid:,}
+❌ Invalid    : {invalid:,}
+✨ Clean      : {clean:,}
+⚠️ Not Clean  : {not_clean:,}
+🎮 Has CODM   : {codm:,}
+📭 No CODM    : {no_codm:,}
+━━━━━━━━━━━━━━━━━━
+"""
+
+    # Level Distribution
+    if levels:
+        total_levels = sum(levels.values()) or 1
+
+        text += "\n📈 LEVEL DISTRIBUTION\n\n"
+
+        for lvl, count in levels.items():
+            pct = (count / total_levels) * 100
+            text += (
+                f"{lvl:<9} "
+                f"{mini_bar(count, total_levels)} "
+                f"{count:>3} ({pct:.1f}%)\n"
+            )
+
+    # Server Distribution
+    if servers:
+        total_servers = sum(servers.values()) or 1
+
+        text += "\n━━━━━━━━━━━━━━━━━━\n"
+        text += "\n🌏 SERVER DISTRIBUTION\n\n"
+
+        sorted_servers = sorted(
+            servers.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        for region, count in sorted_servers[:10]:
+            pct = (count / total_servers) * 100
+            text += (
+                f"{region:<9} "
+                f"{mini_bar(count, total_servers)} "
+                f"{count:>3} ({pct:.1f}%)\n"
+            )
+
+    # Filters
+    filters = []
+
+    if ll:
+        filters.append(f"⭐ Level {ll}+")
+
+    if cl:
+        filters.append("✅ Clean Only")
+
+    if filters:
+        text += "\n━━━━━━━━━━━━━━━━━━\n\n"
+        text += "\n".join(filters)
+
+    text += "\n\n⏹ /stop or /cancel"
+    text += "\n</pre>"
+
+    return text
 
 # ════════════════════════════════════════════
 #  ZIP + CLEANUP
@@ -3424,18 +3473,6 @@ async def on_document(update,context):
     doc=update.message.document
     if not doc or not doc.file_name.lower().endswith(".txt"):
         await update.message.reply_text("❌ Only <b>.txt</b> files!",parse_mode=ParseMode.HTML); return
-    if "garena" not in doc.file_name.lower():
-        await update.message.reply_text(
-            f"❌ <b>Invalid File Name!</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-            f"📛 Your file must have <b>garena</b> in the filename.\n\n"
-            f"✅ <b>Valid Examples:</b>\n"
-            f"  • <code>dreigarena.txt</code>\n"
-            f"  • <code>zyblahblahgarena.txt</code>\n"
-            f"  • <code>garena_combo.txt</code>\n\n"
-            f"❌ <b>Rejected:</b> <code>{doc.file_name}</code>\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n"
-            f"⚠️ Please rename your file and try again!",
-            parse_mode=ParseMode.HTML); return
     # ── 10 MB file size limit (applies to ALL users including VIP) ──────
     FILE_SIZE_LIMIT_MB = 10
     FILE_SIZE_LIMIT_BYTES = FILE_SIZE_LIMIT_MB * 1024 * 1024
