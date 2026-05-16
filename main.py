@@ -3591,7 +3591,7 @@ async def cmd_generate_key(update,context):
         if mu<1: raise ValueError
     except: await update.message.reply_text(usage,parse_mode=ParseMode.HTML); return
     exp=compute_expiry(dt,dv)
-    key=f"TYRANT-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
+    key=f"ywrlds-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
     dd={"hours":f"{dv}h","days":f"{dv}d","months":f"{dv}mo","lifetime":"Lifetime"}[dt]
     keys=load_keys()
     keys[key]={"max_users":mu,"used_by":[],"duration_type":dt,"duration_val":dv,"expires_at":exp,
