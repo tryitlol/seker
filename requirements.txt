@@ -1,0 +1,9 @@
+requests
+cloudscraper
+colorama
+rich
+pycryptodome
+python-telegram-bot==20.7
+httpx
+hpack
+urllib3
