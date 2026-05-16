@@ -3,7 +3,7 @@ cloudscraper
 colorama
 rich
 pycryptodome
-python-telegram-bot==20.7
+python-telegram-bot
 httpx
 hpack
 urllib3
