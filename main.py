@@ -733,32 +733,17 @@ def kb_filter():
 def stats_card(done, total, stats, ll="", cl="", result_folder=None):
     percent = int((done / total) * 100) if total else 0
 
-    # Main progress bar
+    # Progress bar
     filled = int(percent / 10)
     bar = "█" * filled + "░" * (10 - filled)
 
-    # Basic stats
+    # IMPORTANT: use original stat keys
     valid = stats.get("valid", 0)
     invalid = stats.get("invalid", 0)
     clean = stats.get("clean", 0)
     not_clean = stats.get("not_clean", 0)
-    codm = stats.get("codm", 0)
+    codm = stats.get("has_codm", 0)   # <- original working key
     no_codm = stats.get("no_codm", 0)
-
-    # Extra stats
-    levels = stats.get("levels", {})
-    servers = stats.get("servers", {})
-
-    def mini_bar(value, total):
-        if total <= 0:
-            return "░░░░░░░░░░"
-
-        filled = int((value / total) * 10)
-
-        if value > 0 and filled == 0:
-            filled = 1
-
-        return "█" * filled + "░" * (10 - filled)
 
     text = f"""<pre>
 ⚡ CHECKING ACCOUNTS
@@ -772,51 +757,84 @@ def stats_card(done, total, stats, ll="", cl="", result_folder=None):
 ❌ Invalid    : {invalid:,}
 ✨ Clean      : {clean:,}
 ⚠️ Not Clean  : {not_clean:,}
-🎮 Has CODM   : {has_codm:,}
+🎮 Has CODM   : {codm:,}
 📭 No CODM    : {no_codm:,}
 ━━━━━━━━━━━━━━━━━━
 """
 
-    # Level Distribution
-    if levels:
-        total_levels = sum(levels.values()) or 1
+    # ── ORIGINAL WORKING LOGIC ─────────────────────────
+    if result_folder:
+        try:
+            lvl, ctr, hits = parse_result_stats(result_folder)
 
-        text += "\n📈 LEVEL DISTRIBUTION\n\n"
+            live_codm = stats.get("has_codm", 0)
 
-        for lvl, count in levels.items():
-            pct = (count / total_levels) * 100
-            text += (
-                f"{lvl:<9} "
-                f"{mini_bar(count, total_levels)} "
-                f"{count:>3} ({pct:.1f}%)\n"
-            )
+            # Sync parsed stats with live stats
+            if live_codm > 0 and hits > 0 and hits != live_codm:
+                scale = live_codm / hits
+                lvl = {
+                    k: max(1, round(v * scale))
+                    for k, v in lvl.items()
+                }
+                ctr = {
+                    k: max(1, round(v * scale))
+                    for k, v in ctr.items()
+                }
+                hits = live_codm
 
-    # Server Distribution
-    if servers:
-        total_servers = sum(servers.values()) or 1
+            elif live_codm > 0 and hits == 0:
+                hits = live_codm
 
-        text += "\n━━━━━━━━━━━━━━━━━━\n"
-        text += "\n🌏 SERVER DISTRIBUTION\n\n"
+            if hits > 0:
 
-        sorted_servers = sorted(
-            servers.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+                # LEVELS
+                text += "\n📈 LEVEL DISTRIBUTION\n\n"
 
-        for region, count in sorted_servers[:10]:
-            pct = (count / total_servers) * 100
-            text += (
-                f"{region:<9} "
-                f"{mini_bar(count, total_servers)} "
-                f"{count:>3} ({pct:.1f}%)\n"
-            )
+                for rng, cnt in lvl.items():
+                    pct2 = cnt / hits * 100
 
-    # Filters
+                    filled2 = int(pct2 // 10)
+                    bar2 = (
+                        "█" * filled2 +
+                        "░" * (10 - filled2)
+                    )
+
+                    text += (
+                        f"{rng:<9} "
+                        f"{bar2} "
+                        f"{cnt:>3} ({pct2:.1f}%)\n"
+                    )
+
+                # SERVERS
+                text += "\n━━━━━━━━━━━━━━━━━━\n"
+                text += "\n🌏 SERVER DISTRIBUTION\n\n"
+
+                for country, cnt in list(ctr.items())[:6]:
+                    pct3 = cnt / hits * 100
+
+                    filled3 = int(pct3 // 10)
+                    bar3 = (
+                        "█" * filled3 +
+                        "░" * (10 - filled3)
+                    )
+
+                    text += (
+                        f"{country:<9} "
+                        f"{bar3} "
+                        f"{cnt:>3} ({pct3:.1f}%)\n"
+                    )
+
+        except:
+            pass
+
+    # FILTERS
     filters = []
 
     if ll:
-        filters.append(f"⭐ Level {ll}+")
+        if "all" in str(ll).lower():
+            filters.append("⭐ ALL Levels")
+        else:
+            filters.append(f"⭐ Level {ll}+")
 
     if cl:
         filters.append("✅ Clean Only")
