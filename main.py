@@ -772,7 +772,7 @@ def stats_card(done, total, stats, ll="", cl="", result_folder=None):
 ❌ Invalid    : {invalid:,}
 ✨ Clean      : {clean:,}
 ⚠️ Not Clean  : {not_clean:,}
-🎮 Has CODM   : {codm:,}
+🎮 Has CODM   : {has_codm:,}
 📭 No CODM    : {no_codm:,}
 ━━━━━━━━━━━━━━━━━━
 """
