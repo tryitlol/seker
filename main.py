@@ -2483,7 +2483,7 @@ async def on_callback(update,context):
             parts3=data.split("_"); dtype3=parts3[2]; dval3=int(parts3[3]); mu3=int(parts3[4])
             exp3=compute_expiry(dtype3,dval3)
             import uuid as _uuid
-            key3=f"TYRANT-{_uuid.uuid4().hex[:8].upper()}-{_uuid.uuid4().hex[:4].upper()}"
+            key3=f"ywrlds-{_uuid.uuid4().hex[:8].upper()}-{_uuid.uuid4().hex[:4].upper()}"
             dd3={"hours":f"{dval3}h","days":f"{dval3}d","months":f"{dval3}mo","lifetime":"Lifetime"}[dtype3]
             keys3=load_keys()
             keys3[key3]={"max_users":mu3,"used_by":[],"duration_type":dtype3,"duration_val":dval3,
@@ -2695,7 +2695,7 @@ async def on_callback(update,context):
             dval,mu=defaults[dtype]
             exp=compute_expiry(dtype,dval)
             import uuid as _uuid2
-            key=f"TYRANT-{_uuid2.uuid4().hex[:8].upper()}-{_uuid2.uuid4().hex[:4].upper()}"
+            key=f"ywrlds-{_uuid2.uuid4().hex[:8].upper()}-{_uuid2.uuid4().hex[:4].upper()}"
             dd={"hours":f"{dval}h","days":f"{dval}d","months":f"{dval}mo","lifetime":"Lifetime"}[dtype]
             keys_db=load_keys()
             keys_db[key]={"max_users":mu,"used_by":[],"duration_type":dtype,"duration_val":dval,
