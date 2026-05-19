@@ -665,8 +665,7 @@ async def in_channel(bot,uid,ch) -> bool:
 async def join_prompt(target,ch):
     kb = InlineKeyboardMarkup([[InlineKeyboardButton("📢 Join Channel",url=f"https://t.me/{ch}")],
                                 [InlineKeyboardButton("✅ I Joined — Verify Now",callback_data="check_join")]])
-    txt = (f"⛔ <b>Access Denied</b>\n\nJoin <b>@{ch}</b> first.\n\n"
-           "1️⃣ Tap <b>Join Channel</b>\n2️⃣ Tap <b>I Joined — Verify Now</b>")
+    txt = (f"🔒 <b>Channel Verification Required</b>\n\nPlease join <b>@{ch}</b> to continue using the bot.\n\nAfter joining, press <b>Verify Membership</b> below.")
     if hasattr(target,"edit_message_text"): await target.edit_message_text(txt,reply_markup=kb,parse_mode=ParseMode.HTML)
     else: await target.reply_text(txt,reply_markup=kb,parse_mode=ParseMode.HTML)
 
@@ -683,7 +682,8 @@ async def gate(update,context,require_key=True):
         if check_key_expiry(uid):
             await update.effective_message.reply_text("⏰ <b>Key Expired.</b> Contact admin.",parse_mode=ParseMode.HTML); return False,None,load_users()
     if cfg.get("locked") and not ud.get("vip"):
-        await update.effective_message.reply_text("🔒 <b>Bot Locked.</b>",parse_mode=ParseMode.HTML); return False,None,u
+        await update.effective_message.reply_text(
+    "🔒 <b>Maintenance Mode Enabled</b>\n\nThe bot is temporarily unavailable.",parse_mode=ParseMode.HTML); return False,None,u
     return True,ud,u
 
 async def gate_cb(query,context):
@@ -691,7 +691,7 @@ async def gate_cb(query,context):
     if is_admin(tg.id,cfg):
         ud,u=get_or_create_user(uid,tg.username or "",tg.first_name or ""); return True,ud,u
     ud,u=get_or_create_user(uid,tg.username or "",tg.first_name or "")
-    if ud.get("banned"): await query.answer("🚫 Banned!",show_alert=True); return False,None,u
+    if ud.get("banned"): await query.answer("🚫 Access Restricted",show_alert=True); return False,None,u
     if not ud.get("activated") and not is_admin(tg.id,cfg):
         await query.answer("🔑 Use /redeem KEY!",show_alert=True); return False,None,u
     if check_key_expiry(uid): await query.answer("⏰ Key expired!",show_alert=True); return False,None,load_users()
@@ -1553,40 +1553,84 @@ async def deliver_results(bot,chat_id,uid,zip_paths,stats,combo_file=None,note="
 async def cmd_start(update,context):
     cfg=load_config(); tg=update.effective_user; uid=str(tg.id)
     ud,_=get_or_create_user(uid,tg.username or "",tg.first_name or "")
-    if ud.get("banned") and not is_admin(tg.id,cfg): await update.message.reply_text("🚫 You are banned."); return
+
+    if ud.get("banned") and not is_admin(tg.id,cfg):
+        await update.message.reply_text(
+            "🚫 <b>Access Suspended</b>\n\n"
+            "Your account is restricted from using this bot.",
+            parse_mode=ParseMode.HTML
+        )
+        return
+
     if not ud.get("activated") and not is_admin(tg.id,cfg):
-        await update.message.reply_text("🤖 <b>CODM Checker Bot</b>\n\n🔑 Use <code>/redeem YOUR_KEY</code>.",parse_mode=ParseMode.HTML); return
+        await update.message.reply_text(
+            "🔑 <b>Activation Required</b>\n\n"
+            "Use <code>/redeem YOUR_KEY</code> to activate your access.",
+            parse_mode=ParseMode.HTML
+        )
+        return
+
     if not is_admin(tg.id,cfg) and check_key_expiry(uid):
-        await update.message.reply_text("⏰ <b>Key Expired.</b> Contact admin.",parse_mode=ParseMode.HTML); return
+        await update.message.reply_text(
+            "⏰ <b>Subscription Expired</b>\n\n"
+            "Please contact an administrator to renew your access.",
+            parse_mode=ParseMode.HTML
+        )
+        return
+
     if cfg.get("locked") and not is_admin(tg.id,cfg) and not ud.get("vip"):
-        await update.message.reply_text("🔒 <b>Bot Locked.</b>",parse_mode=ParseMode.HTML); return
+        await update.message.reply_text(
+            "🔒 <b>Maintenance Mode Enabled</b>\n\n"
+            "The bot is temporarily unavailable.",
+            parse_mode=ParseMode.HTML
+        )
+        return
 
     vt=" 👑 <b>VIP</b>" if ud.get("vip") else ""
     at=" ⚙️ <b>ADMIN</b>" if is_admin(tg.id,cfg) else ""
+
     iv=ud.get("vip") or is_admin(tg.id,cfg)
     lim=cfg.get("vip_limit") if iv else cfg.get("global_limit")
-    ls=f"\n📊 Line limit : <code>{lim:,}</code>" if lim else ""
+
+    ls=f"\n• Line Limit: <code>{lim:,}</code>" if lim else ""
+
     cd_on,cd_left=check_cooldown(uid,cfg)
     cd_s=""
+
     if cd_on:
         h,m_=int(cd_left//60),int(cd_left%60)
-        cd_s=f"\n⏳ Cooldown   : <code>{'%dh %dm'%(h,m_) if h else '%dm'%m_} remaining</code>"
-    exp_s="" if is_admin(tg.id,cfg) else f"\n🔑 Key expires: {fmt_expiry(ud.get('key_expires_at'))}"
+        cd_s=f"\n• Cooldown: <code>{'%dh %dm'%(h,m_) if h else '%dm'%m_} remaining</code>"
+
+    exp_s="" if is_admin(tg.id,cfg) else f"\n• Key Expires: <code>{fmt_expiry(ud.get('key_expires_at'))}</code>"
+
     if is_admin(tg.id,cfg):
         kb=InlineKeyboardMarkup([
             [InlineKeyboardButton("📂 Check Accounts",callback_data="start_check")],
             [InlineKeyboardButton("⚙️ Admin Panel",callback_data="open_admin_panel")],
         ])
     else:
-        kb=InlineKeyboardMarkup([[InlineKeyboardButton("📂 Check Accounts",callback_data="start_check")]])
+        kb=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📂 Check Accounts",callback_data="start_check")]
+        ])
+
     m=await update.message.reply_text(
-        f"🎯 <b>Garena CODM Checker{vt}{at}</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        f"👤 Name     : <b>{tg.first_name}</b>\n🆔 User ID  : <code>{tg.id}</code>\n"
-        f"📋 Checked  : <code>{ud.get('total_checked',0):,}</code>\n"
-        f"🔄 Sessions : <code>{ud.get('sessions_count',0)}</code>{ls}{cd_s}{exp_s}\n"
-        f"━━━━━━━━━━━━━━━━━━━━\n👇 Tap <b>Check Accounts</b> to start!",
-        reply_markup=kb,parse_mode=ParseMode.HTML)
-    if m: track(uid,m.message_id)
+        f"⚡ <b>Garena CODM Checker{vt}{at}</b>\n\n"
+
+        f"<b>Account Information</b>\n"
+        f"• User: <b>{tg.first_name}</b>\n"
+        f"• User ID: <code>{tg.id}</code>\n"
+        f"• Total Checked: <code>{ud.get('total_checked',0):,}</code>\n"
+        f"• Sessions: <code>{ud.get('sessions_count',0)}</code>"
+        f"{ls}{cd_s}{exp_s}\n\n"
+
+        f"Press <b>Check Accounts</b> below to begin.",
+
+        reply_markup=kb,
+        parse_mode=ParseMode.HTML
+    )
+
+    if m:
+        track(uid,m.message_id)
 
 async def cmd_redeem(update,context):
     cfg=load_config(); tg=update.effective_user; uid=str(tg.id)
@@ -3623,7 +3667,7 @@ async def cmd_reseller_gen_key(update, context):
     except:
         await update.message.reply_text(usage, parse_mode=ParseMode.HTML); return
     exp = compute_expiry(dt, dv)
-    key = f"TYRANT-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
+    key = f"ywrlds-{uuid.uuid4().hex[:8].upper()}-{uuid.uuid4().hex[:4].upper()}"
     dd = {"hours": f"{dv}h", "days": f"{dv}d", "months": f"{dv}mo", "lifetime": "Lifetime"}[dt]
     keys = load_keys()
     keys[key] = {"max_users": mu, "used_by": [], "duration_type": dt, "duration_val": dv,
