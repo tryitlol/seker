@@ -1695,9 +1695,8 @@ def processaccount(session, account, password, cookie_manager, datadome_manager,
             break  # prelogin succeeded or hard-failed — exit retry loop
 
         if v1 in ("IP_BLOCKED", "CONN_ERROR"):
-            logger.error(f"[RETRY] Exhausted {MAX_IP_BLOCK_RETRIES} retries for {account} — skipping")
-            live_stats.update_stats(valid=False)
-            return f"🚨 Proxy exhausted - Skipped after {MAX_IP_BLOCK_RETRIES} retries"
+            logger.error(f"[RETRY] Exhausted {MAX_IP_BLOCK_RETRIES} retries for {account} — sending to retry queue")
+            return ("RETRY", account, password)
 
         if not v1 or not v2:
             live_stats.update_stats(valid=False)
@@ -1754,9 +1753,8 @@ def processaccount(session, account, password, cookie_manager, datadome_manager,
             break  # success
 
         if account_data is None:
-            logger.error(f"[INIT] ❌ Failed account/init after all retries — skipping")
-            live_stats.update_stats(valid=False)
-            return f"🚨 IP Blocked - account/init failed after retries"
+            logger.error(f"[INIT] ❌ account/init failed — sending to retry queue")
+            return ("RETRY", account, password)
 
         if 'error' in account_data:
             if account_data.get('error') == 'ACCOUNT DOESNT EXIST':
