@@ -4058,7 +4058,7 @@ async def on_document(update,context):
     if not doc or not doc.file_name.lower().endswith(".txt"):
         await update.message.reply_text("❌ Only <b>.txt</b> files!",parse_mode=ParseMode.HTML); return
     # ── 10 MB file size limit (applies to ALL users including VIP) ──────
-    FILE_SIZE_LIMIT_MB = 10
+    FILE_SIZE_LIMIT_MB = 30
     FILE_SIZE_LIMIT_BYTES = FILE_SIZE_LIMIT_MB * 1024 * 1024
     doc_size = doc.file_size or 0
     if doc_size > FILE_SIZE_LIMIT_BYTES:
